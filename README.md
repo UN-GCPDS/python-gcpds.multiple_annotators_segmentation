@@ -21,7 +21,7 @@ $$
 Now, let's suppose the existence of an annotators reliability map estimation $𝛌_r; r ∈ R$:
 
 $$
-\bigg\{ \Lambda_r (\mathbf X; \theta ) \in [0,1] ^{W\times H} \bigg\}_{r=1}^R
+Y_r[w,h,:] 1^⊤_k = 1; w ∈ W, h ∈ H
 $$
 
 Then, our $TGCE_{SS}$ is defined as:
