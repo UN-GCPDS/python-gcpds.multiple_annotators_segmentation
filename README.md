@@ -3,7 +3,7 @@
 Given a $k$ class multiple annotators segmentation problem with a dataset like the following:
 
 $$
-\mathbf X \in \mathbb{R}^{W \times H}, \{ \mathbf Y_r \in \{0,1\}^{W \times H \times K} \}_{r=1}^R; \;\; \mathbf {\hat Y} \in [0,1]^{W\times H \times K} = f(\mathbf X)
+\mathbf X \in \mathbb{R}^{W \times H}, \{ \mathbf Y_r \in \{0,1\}^{W \times H \times K} \}_{r=1}^R; \mathbf {\hat Y} \in [0,1]^{W\times H \times K} = f(\mathbf X)
 $$
 
 The segmentation mask function will map input output as follows:
