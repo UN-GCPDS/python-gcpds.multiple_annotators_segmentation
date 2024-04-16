@@ -15,7 +15,7 @@ $$
 $\mathbf Y$ will satisfy the following condition for being a softmax-like representation:
 
 $$
-\mathbf Y_r[w,h,:] \mathbf{1} ^ \top _ k = 1; \;\; w \in W, h \in H
+Y_r[w,h,:] 1^⊤_k = 1; w ∈ W, h ∈ H
 $$
 
 Now, let's suppose the existence of an annotators reliability map estimation $\Lambda_r; \; r \in R$:
