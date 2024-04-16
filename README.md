@@ -27,10 +27,7 @@ $$
 Then, our $TGCE_{SS}$ is defined as:
 
 $$
-\begin{align*}
-TGCE_{SS}(\mathbf{Y}_r,f(\mathbf X;\theta) | \mathbf{\Lambda}_r (\mathbf X;\theta)) &= \mathbb{E}_{r} \left\{ \mathbb{E}_{w,h} \left\{ \Lambda_r (\mathbf X; \theta) \circ \mathbb{E}_k \left\{    \mathbf Y_r \circ \left( \frac{\mathbf 1 _{W\times H \times K} - f(\mathbf X;\theta) ^{\circ q }}{q} \right); k \in K  \right\}  \right. \right. \\ 
-& \left. \left. + \left(\mathbf 1 _{W \times H } - \Lambda _r (\mathbf X;\theta)\right) \circ \left(   \frac{\mathbf 1_{W\times H} - \left(\frac {1}{k} \mathbf 1_{W\times H}\right)^{\circ q}}{q} \right); w \in W, h \in H \right\};r\in R\right\}
-\end{align*}
+TGCE_SS(Y_r, f(X; θ) | 𝛌_r(X; θ)) = E_r { E_{w,h} { 𝛌_r(X; θ) ◦ E_k { Y_r ◦ ((1_{W×H×K} - f(X; θ)^{∘ q }) / q); k ∈ K } + (1_{W×H} - 𝛌_r(X; θ)) ◦ ((1_{W×H} - ((1/k) 1_{W×H})^{∘ q}) / q); w ∈ W, h ∈ H }; r ∈ R }
 $$
 
 Where $q \in (0,1)$.
