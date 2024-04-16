@@ -18,7 +18,7 @@ $$
 \mathbf Y_r[w,h,:] \mathbf{1} ^ \top _ k = 1; w \in W, h \in H
 $$
 
-Now, let's suppose the existence of an annotators reliability map estimation $\Lambda_r; \; r \in R$;
+Now, let's suppose the existence of an annotators reliability map estimation $\Lambda_r; r \in R$;
 
 $$
 \bigg\{ \Lambda_r (\mathbf X; \theta ) \in [0,1] ^{W\times H} \bigg\}_{r=1}^R
