@@ -28,8 +28,8 @@ Then, our $TGCE_{SS}$ is defined as:
 
 $$
 \begin{align*}
-TGCE_{SS}(\mathbf{Y}_r,f(\mathbf X;\theta) | \mathbf{\Lambda}_r (\mathbf X;\theta)) &= \mathbb{E}_{r} \left\{ \mathbb{E}_{w,h} \left\{ \Lambda_r (\mathbf X; \theta) \circ \mathbb{E}_k \bigg\{    \mathbf Y_r \circ \bigg( \frac{\mathbf 1 _{W\times H \times K} - f(\mathbf X;\theta) ^{\circ q }}{q} \bigg); k \in K  \bigg\}  \right. \right. \\ 
-& \left. \left. + \left(\mathbf 1 _{W \times H } - \Lambda _r (\mathbf X;\theta)\right) \circ \bigg(   \frac{\mathbf 1_{W\times H} - (\frac {1}{k} \mathbf 1_{W\times H})^{\circ q}}{q} \bigg); w \in W, h \in H \right\};r\in R\right\}
+TGCE_{SS}(\mathbf{Y}_r,f(\mathbf X;\theta) | \mathbf{\Lambda}_r (\mathbf X;\theta)) &= \mathbb{E}_{r} \left\{ \mathbb{E}_{w,h} \left\{ \Lambda_r (\mathbf X; \theta) \circ \mathbb{E}_k \left\{    \mathbf Y_r \circ \left( \frac{\mathbf 1 _{W\times H \times K} - f(\mathbf X;\theta) ^{\circ q }}{q} \right); k \in K  \right\}  \right. \right. \\ 
+& \left. \left. + \left(\mathbf 1 _{W \times H } - \Lambda _r (\mathbf X;\theta)\right) \circ \left(   \frac{\mathbf 1_{W\times H} - \left(\frac {1}{k} \mathbf 1_{W\times H}\right)^{\circ q}}{q} \right); w \in W, h \in H \right\};r\in R\right\}
 \end{align*}
 $$
 
