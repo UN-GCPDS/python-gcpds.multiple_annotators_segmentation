@@ -8,8 +8,7 @@ setup(
     install_requires=[
         'tensorflow==2.15.0',
         'matplotlib',
-        'numpy',
-        'classification_models @ git+https://github.com/qubvel/classification_models.git'
+        'numpy'
     ],
     author='Lucas Iturriago',
     author_email='liturriago@unal.edu.co',
