@@ -14,4 +14,5 @@ setup(
     author_email='liturriago@unal.edu.co',
     description='Library for multiple annotators segmentation, using custom Losses and Keras models',
     url='https://github.com/UN-GCPDS/python-gcpds.multiple_annotators_segmentation.git',
+    license='LICENSE'
 )
