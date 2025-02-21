@@ -210,15 +210,21 @@ class Crow_Seg_Training:
             loss = 0.0
             gradients = None  # No gradients to apply
         else:
-            gradients = tape.gradient(loss, self.model.trainable_variables)
+            # Separate parameters and gradients for Image_CM and ResUNet components
+            image_cm_vars = []
+            image_cm_grads = []
+            resunet_vars = []
+            resunet_grads = []
 
-            # Separate variables and gradients
-            image_cm_vars = [var for var in self.model.trainable_variables if any(pattern in var.name for pattern in self.image_cm_patterns)]
-            resunet_vars = [var for var in self.model.trainable_variables if not any(pattern in var.name for pattern in self.image_cm_patterns)]
-
-            image_cm_grads = [grad for var, grad in zip(self.model.trainable_variables, gradients) if var in image_cm_vars]
-            resunet_grads = [grad for var, grad in zip(self.model.trainable_variables, gradients) if var in resunet_vars]
-
+            for var, grad in zip(self.model.trainable_variables, gradients):
+                if any(pattern in var.name for pattern in self.image_cm_patterns):
+                    image_cm_vars.append(var)
+                    image_cm_grads.append(grad)
+                else:
+                    resunet_vars.append(var)
+                    resunet_grads.append(grad)
+            
+            # Update model weights using separate optimizers
             self.optimizer_image_cm.apply_gradients(zip(image_cm_grads, image_cm_vars))
             self.optimizer_resunet.apply_gradients(zip(resunet_grads, resunet_vars))
 
