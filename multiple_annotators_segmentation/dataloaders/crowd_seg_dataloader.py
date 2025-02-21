@@ -17,9 +17,94 @@ class Crowd_seg_DataLoader:
         num_classes (int): The number of classes in the dataset.
         num_annotators (int): The number of annotators in the dataset.
         partition (str): The partition of the dataset to load (e.g., 'train', 'val', 'test').
+        group_all_samples_ground_truth (bool): Whether to include ground truth masks when loading the dataset.
+    
+    Note:
+        The dataset directory should have the following structure:
+
+        ```
+        dataset/
+        ├── train/
+        │   ├── patches/
+        │   │   ├── sample_0.png
+        │   │   ├── sample_1.png
+        │   │   └── ...
+        │   └── masks/
+        │       ├── ground_truth/ # Optional In case all_samples_ground_truth is True 
+        │       │                   both Train and Valid must have this folder
+        │       │   ├── sample_0.png
+        │       │   ├── sample_1.png
+        │       │   └── ...
+        │       ├── annotator_1/
+        │       │   ├── class_0/
+        │       │   │   ├── sample_0.png
+        │       │   │   ├── sample_1.png
+        │       │   │   └── ...
+        │       │   └── class_1/
+        │       │       ├── sample_0.png
+        │       │       ├── sample_1.png
+        │       │       └── ...
+        │       └── annotator_2/
+        │           ├── class_0/
+        │           │   ├── sample_0.png
+        │           │   ├── sample_1.png
+        │           │   └── ...
+        │           └── class_1/
+        │               ├── sample_0.png
+        │               ├── sample_1.png
+        │               └── ...
+        ├── valid/
+        │ 
+        └── test/
+            ├── patches/
+            │   ├── sample_0.png
+            │   ├── sample_1.png
+            │   └── ...
+            └── masks/
+                ├── ground_truth/
+                │   ├── sample_0.png
+                │   ├── sample_1.png
+                │   └── ...
+                ├── annotator_1/
+                │   ├── class_0/
+                │   │   ├── sample_0.png
+                │   │   ├── sample_1.png
+                │   │   └── ...
+                │   └── class_1/
+                │       ├── sample_0.png
+                │       ├── sample_1.png
+                │       └── ...
+                └── annotator_2/
+                    ├── class_0/
+                    │   ├── sample_0.png
+                    │   ├── sample_1.png
+                    │   └── ...
+                    └── class_1/
+                        ├── sample_0.png
+                        ├── sample_1.png
+                        └── ...
+        ```
+
+        - The `patches` folder contains the input images.
+        - The `masks` folder contains the segmentation masks for each annotator and class, as well as optional ground truth masks.
+        - Each annotator has their own subfolder within the `masks` directory.
+        - Each class has its own subfolder within the annotator's directory.
+        - The ground truth masks (if present) should be stored in a `ground_truth` subfolder under `masks`.
+        - The image names in the `patches` and `masks` folders should match for corresponding samples.
+
+    Methods:
+        - **__init__**: Initializes the data loader.
+        - **load_patch_images**: Loads and preprocesses patch images.
+        - **load_masks**: Loads masks for each annotator and class.
+        - **load_orig_masks**: Loads ground truth masks.
+        - **process_patch**: Processes individual patch images.
+        - **process_masks**: Processes multiple mask images.
+        - **process_orig_masks**: Processes ground truth masks.
+        - **get_dataset**: Combines data into a tf.data.Dataset.
     """
 
-    def __init__(self, data_dir, batch_size, image_size, num_classes, num_annotators, partition):
+
+    def __init__(self, data_dir, batch_size, image_size, num_classes, num_annotators, partition, all_samples_ground_truth=True):
         """
         Initializes the Crowd_seg_DataLoader with the given parameters.
 
@@ -29,7 +114,8 @@ class Crowd_seg_DataLoader:
             image_size (tuple): The size to which images will be resized.
             num_classes (int): The number of classes in the dataset.
             num_annotators (int): The number of annotators in the dataset.
-            partition (str): The partition of the dataset to load (e.g., 'train', 'val', 'test').
+            partition (str): The partition of the dataset to load (e.g., 'Train', 'Valid', 'Test').
+            all_samples_ground_truth (bool): Whether to include ground truth masks when loading the dataset.
         """
         self.data_dir = data_dir
         self.batch_size = batch_size
@@ -37,6 +123,7 @@ class Crowd_seg_DataLoader:
         self.num_classes = num_classes
         self.num_annotators = num_annotators
         self.partition = partition
+        self.group_all_samples_ground_truth = all_samples_ground_truth
 
     def load_patch_images(self):
         """
@@ -219,15 +306,18 @@ class Crowd_seg_DataLoader:
         Combines patch images, masks, and annotator IDs into a single dataset.
 
         Returns:
-            tf.data.Dataset: A dataset containing batches of patch images, masks, annotator IDs, and original masks.
+            tf.data.Dataset: A dataset containing batches of patch images, masks, annotator IDs, and original masks if all_samples_ground_truth is True.
         """
         patch_ds = self.load_patch_images()
         masks_ds, id_ds = self.load_masks()
-        masks_ds_orig = self.load_orig_masks()
-
-        # Combine all elements into a single dataset
-        dataset = tf.data.Dataset.zip((patch_ds, masks_ds, id_ds, masks_ds_orig))
-
+        if self.partition in ('Train', 'Val', 'Valid', 'Validation') and self.group_all_samples_ground_truth:
+            masks_ds_orig = self.load_orig_masks()
+            dataset = tf.data.Dataset.zip((patch_ds, masks_ds, id_ds, masks_ds_orig))
+        elif self.partition == 'Test':
+            masks_ds_orig = self.load_orig_masks()
+            dataset = tf.data.Dataset.zip((patch_ds, masks_ds, id_ds, masks_ds_orig))
+        else:
+            dataset = tf.data.Dataset.zip((patch_ds, masks_ds, id_ds))
         # Apply batching and prefetching for optimization
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(tf.data.AUTOTUNE)
