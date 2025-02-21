@@ -2,9 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='multiple_annotators_segmentation',
-    version='0.1.0',
-    packages=find_packages(where='multiple_annotators_segmentation'),
-    package_dir={'': 'multiple_annotators_segmentation'},
+    version='0.1.1',
+    packages=find_packages(),
     install_requires=[
         'tensorflow==2.15.0',
         'matplotlib',
