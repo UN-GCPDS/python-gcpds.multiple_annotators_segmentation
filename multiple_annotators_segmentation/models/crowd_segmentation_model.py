@@ -10,8 +10,6 @@ from tensorflow.keras.utils import get_custom_objects
 # ResUNet Model Backbone
 from classification_models.keras import Classifiers  # Requires: pip install git+https://github.com/qubvel/classification_models.git
 
-
-
 ResNet34, preprocess_input = Classifiers.get('resnet34')
 
 # Definition of layers for the neural network structure
