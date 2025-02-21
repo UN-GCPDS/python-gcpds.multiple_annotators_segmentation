@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 from functools import partial
-from tensorflow.keras.backend import K
+from tensorflow.keras.backend as K
 from tensorflow.keras import layers, Model
 from keras.layers import Layer, Activation
 from tensorflow.keras.optimizers import Adam
