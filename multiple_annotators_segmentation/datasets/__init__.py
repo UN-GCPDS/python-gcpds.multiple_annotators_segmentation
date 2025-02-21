@@ -1,0 +1,1 @@
+from .oxfordIiitpet_msa import OxfordIiitPet_Multiple_Synthetic_Annotators
