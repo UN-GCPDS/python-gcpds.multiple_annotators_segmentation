@@ -5,7 +5,7 @@ setup(
     version='0.1.5.1',
     packages=find_packages(),
     install_requires=[
-        'tensorflow==2.15.0',
+        'tensorflow',
         'matplotlib',
         'numpy',
         'wandb'
