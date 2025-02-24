@@ -3,33 +3,35 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-def random_sample_visualization(partition_dataset, original_masks=True):
+def sample_performance_visualization(partition_dataset, model, original_masks=True):  
     """
-   Visualizes a random sample from a dataset containing images, segmentation masks, and annotator IDs.
-   
-   This function selects a random batch from the provided dataset, then selects a random sample 
-   within that batch and creates a visualization. The visualization shows the original image, 
-   the annotator's segmentation masks for different classes, and optionally the original ground 
-   truth masks when available.
-   
-   Args:
+    Visualizes model prediction performance on a random sample from a dataset.
+    
+    This function selects a random batch from the provided dataset, then selects a random sample 
+    within that batch and creates a multi-panel visualization. The visualization shows the original 
+    image, the annotator's segmentation masks, the model's predicted segmentation masks, and 
+    optionally the original ground truth masks when available.
+    
+    Args:
        partition_dataset: A TensorFlow dataset containing batches of (images, masks, annotator_ids)
                          or (images, masks, annotator_ids, original_masks) if original_masks=True
+       model: The trained segmentation model to generate predictions
        original_masks (bool, optional): Whether the dataset includes original ground truth masks.
                                        Defaults to True.
-   
-   Returns:
+    
+    Returns:
        None. Displays a matplotlib figure showing:
            - The original image
            - The original ground truth segmentation masks (if original_masks=True)
            - The annotator's segmentation masks for each class
+           - The model's predicted segmentation masks for each class
            
-   Notes:
+    Notes:
        - The function prints shape information about the selected batch
        - The visualization layout adapts based on the number of segmentation classes
        - Maximum 10 classes are displayed (columns) if there are more
-    """    
-
+       - Uses tight_layout for better visualization spacing
+    """
     # Select a random batch index
     batch = random.randint(0, len(partition_dataset)-1)
 
@@ -48,6 +50,8 @@ def random_sample_visualization(partition_dataset, original_masks=True):
     # Permute the axes
     permuted_masks = tf.transpose(masks, perm=[0, 2, 3, 1]) # NCHW --> NHWC
 
+    y_pred, _ = model.predict((images[sample:sample+1,...],id_annotator[sample:sample+1,...]))
+
     columns = masks.shape[1] if masks.shape[1] <= 10 else 10
 
     if original_masks:
@@ -56,7 +60,7 @@ def random_sample_visualization(partition_dataset, original_masks=True):
 
         columns = max(classes_orig_mask, columns)
 
-    rows = 3 if original_masks else 2
+    rows = 4 if original_masks else 3
     
     fig, axes = plt.subplots(rows, columns, figsize=(10, 6))
 
@@ -70,12 +74,17 @@ def random_sample_visualization(partition_dataset, original_masks=True):
                 axes[1,i].set_title(f"Unique original mask of segmentation" if orig_masks.shape[-1] == 1 else f"Original masks of segmentation for class {i}")
                 axes[1,i].imshow(orig_masks[sample,:,:,i:i+1])
             axes[1,i].axis('off')
-
+            
     for i in range(columns):
-        axes[rows-1,i].set_title(f"Annotator {tf.argmax(id_annotator[sample]).numpy()}'s masks of segmentation for class {i}")
-        axes[rows-1,i].imshow(permuted_masks[sample, :, :, i:i+1])
+        if permuted_masks[sample,:,:,i:i+1].shape[-1] == 1:
+            axes[rows-2,i].set_title(f"Annotator {tf.argmax(id_annotator[sample]).numpy()}'s masks of segmentation for class {i}")
+            axes[rows-2,i].imshow(permuted_masks[sample, :, :, i:i+1])
+        if y_pred[0,:,:,i:i+1].shape[-1] == 1:
+            axes[rows-1,i].set_title(f"Predicted masks of segmentation for class {i}")
+            axes[rows-1,i].imshow(tf.where(y_pred[0, :, :, i:i+1] > 0.5, 1.0, 0.0))
         axes[0,i].axis('off')  # Hide the axes for a cleaner look
-        axes[rows-1,i].axis('off')
-
-    fig.tight_layout() 
+        axes[rows-2,i].axis('off')
+        axes[rows-1,i].axis('off')       
+        
+    fig.tight_layout()   
     plt.show()

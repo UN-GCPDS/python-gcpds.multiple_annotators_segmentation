@@ -26,7 +26,7 @@ def OxfordIiitPet_Multiple_Synthetic_Annotators():
         OxfordIiitPet_Multiple_Synthetic_Annotators()
     """
     # Download Oxford-IIIT Pet dataset with synthetic annotators
-    subprocess.run(["kaggle", "datasets", "download", "-d", "lucasiturriago/oxford-pets/6"])
+    subprocess.run(["kaggle", "datasets", "download", "-d", "lucasiturriago/oxford-pets/9"])
     
     # Extract the downloaded dataset files
     subprocess.run(["unzip", "-q", "oxford-pets.zip", "-d", "datasets"])

@@ -20,70 +20,6 @@ class Crowd_seg_DataLoader:
         group_all_samples_ground_truth (bool): Whether to include ground truth masks when loading the dataset.
     
     Note:
-        The dataset directory should have the following structure:
-
-        ```
-        dataset/
-        ├── train/
-        │   ├── patches/
-        │   │   ├── sample_0.png
-        │   │   ├── sample_1.png
-        │   │   └── ...
-        │   └── masks/
-        │       ├── ground_truth/ # Optional In case all_samples_ground_truth is True 
-        │       │                   both Train and Valid must have this folder
-        │       │   ├── sample_0.png
-        │       │   ├── sample_1.png
-        │       │   └── ...
-        │       ├── annotator_1/
-        │       │   ├── class_0/
-        │       │   │   ├── sample_0.png
-        │       │   │   ├── sample_1.png
-        │       │   │   └── ...
-        │       │   └── class_1/
-        │       │       ├── sample_0.png
-        │       │       ├── sample_1.png
-        │       │       └── ...
-        │       └── annotator_2/
-        │           ├── class_0/
-        │           │   ├── sample_0.png
-        │           │   ├── sample_1.png
-        │           │   └── ...
-        │           └── class_1/
-        │               ├── sample_0.png
-        │               ├── sample_1.png
-        │               └── ...
-        ├── valid/
-        │ 
-        └── test/
-            ├── patches/
-            │   ├── sample_0.png
-            │   ├── sample_1.png
-            │   └── ...
-            └── masks/
-                ├── ground_truth/
-                │   ├── sample_0.png
-                │   ├── sample_1.png
-                │   └── ...
-                ├── annotator_1/
-                │   ├── class_0/
-                │   │   ├── sample_0.png
-                │   │   ├── sample_1.png
-                │   │   └── ...
-                │   └── class_1/
-                │       ├── sample_0.png
-                │       ├── sample_1.png
-                │       └── ...
-                └── annotator_2/
-                    ├── class_0/
-                    │   ├── sample_0.png
-                    │   ├── sample_1.png
-                    │   └── ...
-                    └── class_1/
-                        ├── sample_0.png
-                        ├── sample_1.png
-                        └── ...
-        ```
 
         - The `patches` folder contains the input images.
         - The `masks` folder contains the segmentation masks for each annotator and class, as well as optional ground truth masks.
@@ -104,7 +40,7 @@ class Crowd_seg_DataLoader:
     """
 
 
-    def __init__(self, data_dir, batch_size, image_size, num_classes, num_annotators, partition, all_samples_ground_truth=True):
+    def __init__(self, data_dir, batch_size, image_size, num_classes, num_annotators, partition, all_samples_ground_truth=True, target_class=None):
         """
         Initializes the Crowd_seg_DataLoader with the given parameters.
 
@@ -124,6 +60,7 @@ class Crowd_seg_DataLoader:
         self.num_annotators = num_annotators
         self.partition = partition
         self.group_all_samples_ground_truth = all_samples_ground_truth
+        self.target_class = target_class
 
     def load_patch_images(self):
         """
@@ -204,27 +141,28 @@ class Crowd_seg_DataLoader:
             tf.data.Dataset: A dataset of processed mask tensors.
         """
 
-        # Create the path for masks images
-        mask_path_pattern = os.path.join(self.data_dir, self.partition, 'masks', 'ground_truth','*.png')
-        mask_files = glob.glob(mask_path_pattern)
+        mask_path_main = os.path.join(self.data_dir, self.partition, 'masks', 'ground_truth')
+        self.existing_classes = []
+        
+        for class_id in range(self.num_classes):
+            masks_sample = []
+            mask_path_pattern = os.path.join(mask_path_main, f'class_{class_id}', '*.png')
+            found_masks = glob.glob(mask_path_pattern)
+            if len(found_masks) != 0:
+                self.existing_classes.append(class_id)
+            print(f"Original masks path, class {class_id}: {mask_path_pattern}")
+            print(f"Number of masks found: {len(found_masks)}")
 
-        # Sort mask files alphanumerically
-        def alphanumeric_key(s):
-            # Split the string into parts (numbers and text)
-            parts = re.split(r'(\d+)', s)
-            # Convert numeric parts to integers for proper sorting
-            return [int(part) if part.isdigit() else part for part in parts]
-
-        mask_files = sorted(mask_files, key=alphanumeric_key)
-
-        # Print the complete path and the number of found masks images
-        print(f"Complete path for masks (ground truth): {mask_path_pattern}")
-        print(f"Number of ground truth mask files found: {len(mask_files)}")
-
-        # Create a TensorFlow dataset from the masks file paths
-        masks_ds = tf.data.Dataset.from_tensor_slices(mask_files)
-
-        # Map each file mask to a processed image
+        masks_path = []
+        for sample in range(self.num_samples):
+            masks_sample = []
+            for class_id in self.existing_classes:
+                mask_annotation_path = os.path.join(mask_path_main, f'class_{class_id}', f'sample_{sample}.png')
+                masks_sample.append(mask_annotation_path)
+            masks_path.append(masks_sample)
+        
+        # Create dataset from `masks_path` and apply `process_masks` to each set of paths
+        masks_ds = tf.data.Dataset.from_tensor_slices(masks_path)
         masks_ds = masks_ds.map(self.process_orig_masks, num_parallel_calls=tf.data.AUTOTUNE)
 
         return masks_ds
@@ -284,7 +222,7 @@ class Crowd_seg_DataLoader:
 
         return masks
 
-    def process_orig_masks(self, file_mask):
+    def process_orig_masks(self, sample_paths):
         """
         Processes a ground truth mask image for consistency with other datasets.
 
@@ -294,12 +232,36 @@ class Crowd_seg_DataLoader:
         Returns:
             tf.Tensor: Processed mask tensor.
         """
-        mask = tf.io.read_file(file_mask)  # Read the image file
-        mask = tf.image.decode_jpeg(mask, channels=1)  # Decode JPEG image
-        mask = tf.image.resize(mask, self.image_size)  # Resize image
-        mask = tf.cast(mask, tf.float32)  # Convert to float32
-        mask /= 255.0  # Normalize to [0, 1]
-        return mask
+        # Convert string paths to a list of decoded images using tf.map_fn
+        decoded_images = tf.map_fn(
+            tf.io.read_file,
+            sample_paths,
+            dtype=tf.string,
+            parallel_iterations=4
+        )
+
+        # Decode images
+        masks = tf.map_fn(
+            lambda x: tf.io.decode_png(x, channels=1),
+            decoded_images,
+            dtype=tf.uint8,
+            parallel_iterations=4
+        )
+        
+        # Resize the masks to a common size
+        masks = tf.map_fn(
+            lambda x: tf.image.resize(x, size=self.image_size),
+            masks,
+            dtype=tf.float32
+        )
+
+        # Convert to float32 and normalize
+        masks = tf.cast(masks, tf.float32) / 255.0
+        
+        masks = tf.squeeze(masks, axis=-1)  # Remove the last dimension
+        masks = tf.transpose(masks, perm=[1, 2, 0])  # Transpose to [height, width, classes]
+        
+        return masks
 
     def get_dataset(self):
         """
