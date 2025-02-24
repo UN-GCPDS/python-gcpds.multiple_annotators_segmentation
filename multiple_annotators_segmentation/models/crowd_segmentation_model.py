@@ -100,7 +100,59 @@ class SparseSoftmax(Layer):
         """
         return input_shape
 
-tf.keras.utils.get_custom_objects()['sparse_softmax'] = SparseSoftmax()
+class ExpandAndTileLayer(tf.keras.layers.Layer):
+    """
+    A custom TensorFlow layer to expand and tile a 2D tensor into a 4D tensor.
+
+    Attributes:
+        input_height (int): Height dimension to tile the input tensor.
+        input_width (int): Width dimension to tile the input tensor.
+
+    Methods:
+        call(inputs): Processes the input tensor.
+        compute_output_shape(input_shape): Computes the output shape of the layer.
+    """
+    
+    def __init__(self, input_height, input_width, **kwargs):
+        """
+        Initialize the ExpandAndTileLayer.
+
+        Args:
+            input_height (int): The height of the output tensor.
+            input_width (int): The width of the output tensor.
+        """
+        super(ExpandAndTileLayer, self).__init__(**kwargs)
+        self.input_height = input_height
+        self.input_width = input_width
+    
+    def call(self, inputs):
+        """
+        Expand and tile the input tensor.
+
+        Args:
+            inputs (tf.Tensor): Input tensor of shape (batch_size, num_instances).
+
+        Returns:
+            tf.Tensor: Expanded and tiled tensor of shape 
+                (batch_size, num_instances, input_height, input_width).
+        """
+        # Expand two new dimensions
+        expanded = tf.expand_dims(tf.expand_dims(inputs, axis=-1), axis=-1)
+        # Tile across the new dimensions
+        tiled = tf.tile(expanded, [1, 1, self.input_height, self.input_width])
+        return tiled
+    
+    def compute_output_shape(self, input_shape):
+        """
+        Compute the output shape of the layer.
+
+        Args:
+            input_shape (tuple): Shape of the input tensor.
+
+        Returns:
+            tuple: Shape of the output tensor.
+        """
+        return (input_shape[0], input_shape[1], self.input_height, self.input_width)
 
 def residual_block(x, filters, kernel_initializer, block_name):
     """
@@ -274,13 +326,14 @@ def Image_CM(A_id_input, image_input, class_no, input_height, input_width):
     # Output generation
     output = layers.Dense(class_no * class_no, name='dense_output')(concatenated)
     output = layers.BatchNormalization(name='output_norm')(output)
-    output = tf.reshape(output, [-1, class_no, class_no])
-    output = tf.keras.activations.softplus(output)
+    output = layers.Reshape((-1, class_no, class_no))(output)
+    output = layers.Activation(keras.activations.softplus)(output)
 
-    # Spatial expansion
-    output_expanded = tf.expand_dims(tf.expand_dims(output, axis=-1), axis=-1)
-    tiled = tf.tile(output_expanded, [1, 1, 1, input_height, input_width])
-    y = tf.reshape(tiled, [-1, class_no * class_no, input_height, input_width])
+    # Spatial expansio
+    expander = ExpandAndTileLayer(input_height=input_height, input_width=input_width)
+    tiled = expander(output)
+
+    y = layers.Reshape((-1, class_no * class_no, input_height, input_width))(tiled)
 
     return y
 
