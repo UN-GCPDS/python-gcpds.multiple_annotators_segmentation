@@ -1,1 +1,1 @@
-from .crowd_segmentation_model import Crowd_Segmentation_Model
+from .crowd_segmentation_model import Crowd_Segmentation_Model, SparseSoftmax
