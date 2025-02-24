@@ -100,7 +100,7 @@ class SparseSoftmax(Layer):
         """
         return input_shape
 
-class ExpandAndTileLayer(tf.keras.layers.Layer):
+class ExpandAndTileLayer(Layer):
     """
     A custom TensorFlow layer to expand and tile a 2D tensor into a 4D tensor.
 
