@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='multiple_annotators_segmentation',
-    version='0.1.5.7',
+    version='0.1.5.8',
     packages=find_packages(),
     install_requires=[
         'tensorflow',

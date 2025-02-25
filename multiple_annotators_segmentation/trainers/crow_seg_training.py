@@ -1,5 +1,6 @@
 import os
 import time
+import wandb
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -105,7 +106,6 @@ class Crow_Seg_Training:
         if self.wandb_monitoring is None:
             return 'Normal'
         elif isinstance(self.wandb_monitoring, list) and len(self.wandb_monitoring) == 3 and all(isinstance(item, str) for item in self.wandb_monitoring):
-            import wandb  # Ensure wandb is imported here
             wandb.login(key=self.wandb_monitoring[0])
             self.run = wandb.init(project=self.wandb_monitoring[1], name=self.wandb_monitoring[2], config=self.config_model)
             self.wandb_monitoring = True
