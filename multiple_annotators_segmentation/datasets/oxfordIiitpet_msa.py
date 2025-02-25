@@ -17,10 +17,6 @@ def OxfordIiitPet_Multiple_Synthetic_Annotators():
           and 256 evaluation images. Each image includes segmentation masks 
           corresponding to each annotator, with distinct channels for background 
           (class 0) and pet (class 1).
-        - This function downloads the dataset from Kaggle, extracts it to the 
-          'datasets' directory, and creates 'models' and 'results' directories 
-          for subsequent use. The `subprocess.run` commands are used to execute 
-          shell commands for these operations.
 
     Example:
         OxfordIiitPet_Multiple_Synthetic_Annotators()
@@ -30,7 +26,3 @@ def OxfordIiitPet_Multiple_Synthetic_Annotators():
     
     # Extract the downloaded dataset files
     subprocess.run(["unzip", "-q", "oxford-pets.zip", "-d", "datasets"])
-    
-    # Create directories for storing models and results
-    subprocess.run(["mkdir", "models"])
-    subprocess.run(["mkdir", "results"])
