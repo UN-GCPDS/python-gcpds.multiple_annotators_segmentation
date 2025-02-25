@@ -241,6 +241,7 @@ class Crow_Seg_Training:
         - Model saving based on best validation performance
         - WandB logging if enabled
         - Performance parameter adjustments (alpha, min_trace) at epoch 5
+        - Set Segmentation model learning rate to 1e-5 at epoch 45
         
         The best model is saved to './models/best_model.keras' based on either
         validation Dice score (if all_ground_truths=True) or validation loss.
@@ -259,6 +260,10 @@ class Crow_Seg_Training:
                     self.min_trace = True
                     self.alpha = 0.4
                     print(f"Minimize trace activated!, Alpha updated to {self.alpha}")
+
+                if epoch == 45:
+                    self.optimizer_seg_model.learning_rate.assign(1e-5)
+                    print(f"Learning rate updated to {1e-5}")
     
                 total_train_loss = 0.0
                 num_train_batches = 0
