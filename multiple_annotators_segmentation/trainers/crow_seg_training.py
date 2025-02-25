@@ -391,7 +391,11 @@ class Crow_Seg_Training:
         """
         Start the training process.
         
-        This is the main entry point for training after the class has been initialized.
+        This is the main entry point for training after the class has been initialized
+        Creates the models folder in the current directory in case it does not exist.
         """
-        
+        # Check if the directory exists, and if not, create it
+        if not os.path.exists('./models'):
+            os.makedirs('./models')
+
         self.training()
