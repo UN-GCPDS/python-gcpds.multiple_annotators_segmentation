@@ -363,7 +363,7 @@ class Crow_Seg_Training:
                 
                 if self.all_ground_truths:
                     tf.print(f"Train_DICE: {'zero' if avg_train_dice == 0 else f'{avg_train_dice:.4f}'} | "
-                            f"Valid_ICE: {'zero' if avg_val_dice == 0 else f'{avg_val_dice:.4f}'} | "
+                            f"Valid_DICE: {'zero' if avg_val_dice == 0 else f'{avg_val_dice:.4f}'} | "
                             f"Train_Jaccard: {'zero' if avg_train_jaccard == 0 else f'{avg_train_jaccard:.4f}'} | "
                             f"Valid_Jaccard: {'zero' if avg_val_jaccard == 0 else f'{avg_val_jaccard:.4f}'} | "
                             f"Train_Sensitivity: {'zero' if avg_train_sensitivity == 0 else f'{avg_train_sensitivity:.4f}'} | "

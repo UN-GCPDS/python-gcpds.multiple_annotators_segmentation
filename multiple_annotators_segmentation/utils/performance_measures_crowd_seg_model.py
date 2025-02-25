@@ -112,7 +112,7 @@ def performance_measures_crowd_seg_model(
 
     # Print performance summaries with 5 decimal places precision
     print("Model's performance metrics:")
-    print(f"Dice Coefficient mean: {np.mean(dice_results):.5f}, standard deviation: {np.std(dice_results):.5f}")
+    print(f"DICE Coefficient mean: {np.mean(dice_results):.5f}, standard deviation: {np.std(dice_results):.5f}")
     print(f"Jaccard Index mean: {np.mean(jaccard_results):.5f}, standard deviation: {np.std(jaccard_results):.5f}")
     print(f"Sensitivity mean: {np.mean(sensitivity_results):.5f}, standard deviation: {np.std(sensitivity_results):.5f}")
     print(f"Specificity mean: {np.mean(specificity_results):.5f}, standard deviation: {np.std(specificity_results):.5f}")
@@ -124,7 +124,7 @@ def performance_measures_crowd_seg_model(
             os.makedirs('./results')
         # Generate filenames using the configuration parameters
         filename_base = f"./results/{config_model['Main_model']}_{config_model['Activation']}_{config_model['Dataset']}"
-        np.save(f"{filename_base}_Dice.npy", dice_results)
+        np.save(f"{filename_base}_DICE.npy", dice_results)
         np.save(f"{filename_base}_Jaccard.npy", jaccard_results)
         np.save(f"{filename_base}_Sensitivity.npy", sensitivity_results)
         np.save(f"{filename_base}_Specificity.npy", specificity_results)
