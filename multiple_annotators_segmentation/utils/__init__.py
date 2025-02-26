@@ -1,3 +1,4 @@
 from .random_sample_visualization import random_sample_visualization 
 from .sample_performance_visualization import sample_performance_visualization
 from .performance_measures_crowd_seg_model import performance_measures_crowd_seg_model
+from .haphazard_sample_visualization import haphazard_sample_visualization

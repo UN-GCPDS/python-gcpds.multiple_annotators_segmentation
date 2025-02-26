@@ -71,7 +71,7 @@ def sample_performance_visualization(partition_dataset, model, original_masks=Tr
     if original_masks:
         for i in range(columns):
             if orig_masks[sample,:,:,i:i+1].shape[-1] == 1:
-                axes[1,i].set_title(f"Unique original mask of segmentation" if orig_masks.shape[-1] == 1 else f"Original masks of segmentation for class {i}")
+                axes[1,i].set_title(f"Single original mask of segmentation" if orig_masks.shape[-1] == 1 else f"Original masks of segmentation for class {i}")
                 axes[1,i].imshow(orig_masks[sample,:,:,i:i+1])
             axes[1,i].axis('off')
             

@@ -12,62 +12,114 @@ from ..metrics import dice_metric, jaccard_metric, sensitivity_metric, specifici
 
 class Crow_Seg_Training:
     """
-    A training class for semantic segmentation models with uncertainty estimation via confusion matrices.
+    A training manager for segmentation models with confusion matrix learning.
     
-    This class manages the training process for segmentation models that incorporate image-level 
-    confusion matrices for handling noisy labels. It supports both standard training and validation
-    loops with performance tracking, optional Weights & Biases monitoring, and separate optimizers
-    for segmentation and confusion matrix components.
+    This class handles the training process for segmentation models that incorporate 
+    a crowdsourcing-based approach using confusion matrices to model annotator accuracy.
+    It supports training with noisy labels from multiple annotators and provides robust
+    evaluation metrics when ground truth segmentation masks are available.
     
-    Args:
-        model: The segmentation model to train, expected to output predictions and confusion matrices
-        train_dataset: TensorFlow dataset containing training data batches
-        valid_dataset: TensorFlow dataset containing validation data batches
-        epochs (int, optional): Number of training epochs. Defaults to 60.
-        wandb_monitoring (list, optional): WandB configuration as [API_KEY, PROJECT, RUN_NAME] or None to disable. Defaults to None.
-        all_ground_truths (bool, optional): Whether datasets include original ground truth masks. Defaults to False.
-        config_model: Configuration dictionary for model parameters, used for WandB logging
+    The class manages separate optimizers for the image confusion matrix components and 
+    the segmentation model components, applies dynamic parameter adjustments during training,
+    and supports optional Weights & Biases monitoring.
     
-    Attributes:
-        optimizer_image_cm: Optimizer for confusion matrix components (Adam, lr=1e-3)
-        optimizer_seg_model: Optimizer for segmentation model components (Adam, lr=1e-4)
-        min_trace: Whether to minimize trace in loss function, switches to True after epoch 5
-        alpha: Loss function weighting parameter, starts at 1.0, changes to 0.4 after epoch 5
-        best_val_dice: Tracks best validation Dice score for model saving
-        best_val_loss: Tracks best validation loss for model saving
-        image_cm_patterns: List of patterns to identify confusion matrix layers in model
-        device: Device to run training on (GPU if available, otherwise CPU)
+    Parameters
+    ----------
+    model : tf.keras.Model
+        The segmentation model with confusion matrix capability.
+    train_dataset : tf.data.Dataset
+        Training dataset yielding (images, masks, annotator_ids) or 
+        (images, masks, annotator_ids, ground_truth_masks) tuples.
+    valid_dataset : tf.data.Dataset
+        Validation dataset with the same structure as train_dataset.
+    config_model : dict
+        Configuration parameters for the model to be logged in WandB.
+    epochs : int, optional
+        Number of training epochs (default: 60).
+    wandb_monitoring : list or None, optional
+        If provided, a list with [api_key, project_name, run_name] for WandB tracking.
+    all_ground_truths : bool, optional
+        Whether the datasets include ground truth masks for evaluation (default: False).
+    unique_class : int or None, optional
+        If specified, evaluate metrics only on this specific class (default: None).
     
-    Methods:
-        wandb_logging(): Sets up Weights & Biases monitoring if configured
-        calculated_metrics(): Computes segmentation metrics (Dice, Jaccard, sensitivity, specificity)
-        train_step(): Executes a single training step with gradient updates
-        val_step(): Executes a single validation step
-        training(): Runs the full training process for the specified number of epochs
-        start(): Entry point to begin the training process
+    Attributes
+    ----------
+    best_val_dice : float
+        Best validation Dice coefficient achieved during training.
+    best_val_loss : float
+        Best validation loss achieved during training.
+    alpha : float
+        Weight parameter for the loss function, adjusted during training.
+    min_trace : bool
+        Flag to enable trace minimization in the loss function, activated after epoch 5.
+    device : str
+        Device used for training ('/GPU:0' or '/CPU:0').
+    
+    Methods
+    -------
+    start()
+        Main entry point to begin the training process.
+    training()
+        Run the full training loop with train and validation steps.
+    train_step()
+        Execute a single training step with gradient updates.
+    val_step()
+        Execute a single validation step without gradient updates.
+    calculated_metrics(y_true, y_pred)
+        Calculate segmentation quality metrics between true and predicted masks.
+    wandb_logging()
+        Set up Weights & Biases logging if monitoring is enabled.
     """
 
-    def __init__(self, model, train_dataset, valid_dataset, config_model, epochs=60, wandb_monitoring=None, all_ground_truths=False ):
+    def __init__(self, model, train_dataset, valid_dataset, config_model, epochs=60, wandb_monitoring=None, all_ground_truths=False, unique_class=None):
         """
-        Initialize the Crow_Seg_Training class with model and training parameters.
+        Initialize the Crow_Seg_Training instance with model and training parameters.
         
-        Parameters:
-        -----------
+        Parameters
+        ----------
         model : tf.keras.Model
-            The segmentation model with confusion matrix components to be trained.
+            The segmentation model with confusion matrix capability.
         train_dataset : tf.data.Dataset
-            Dataset for training containing (images, masks, annotator_ids) or 
-            (images, masks, annotator_ids, original_masks).
+            Training dataset yielding (images, masks, annotator_ids) tuples or
+            (images, masks, annotator_ids, ground_truth_masks) tuples when all_ground_truths=True.
         valid_dataset : tf.data.Dataset
-            Dataset for validation with the same structure as train_dataset.
+            Validation dataset with the same structure as train_dataset.
         config_model : dict
-            Configuration dictionary with model parameters for WandB logging.
-        epochs : int, default=60
-            Number of training epochs.
-        wandb_monitoring : None or list, default=None
-            If not None, should be a list of [api_key, project_name, run_name] for Weights & Biases logging.
-        all_ground_truths : bool, default=False
-            If True, expects datasets to include original ground truth masks for metric calculation.
+            Configuration parameters for the model to be logged in WandB.
+        epochs : int, optional
+            Number of training epochs. Default is 60.
+        wandb_monitoring : list or None, optional
+            If provided, must be a list containing [api_key, project_name, run_name] for 
+            Weights & Biases tracking. Default is None (no monitoring).
+        all_ground_truths : bool, optional
+            Whether datasets include ground truth masks for evaluation metrics calculation.
+            When True, datasets should yield 4-tuples including original masks.
+            Default is False.
+        unique_class : int or None, optional
+            If specified, calculate metrics only for this specific class index.
+            Default is None (evaluate on all classes).
+        
+        Attributes
+        ----------
+        optimizer_image_cm : tf.keras.optimizers.Adam
+            Optimizer for the confusion matrix components with learning rate 1e-3.
+        optimizer_seg_model : tf.keras.optimizers.Adam
+            Optimizer for the segmentation model components with learning rate 1e-4.
+        min_trace : bool
+            Flag for loss function trace minimization, initially False.
+        alpha : float
+            Weight parameter for the loss function, initially 1.
+        best_val_dice : float
+            Best validation Dice coefficient, initially 0.0.
+        best_val_loss : float
+            Best validation loss, initially infinity.
+        image_cm_patterns : list
+            List of string patterns to identify confusion matrix component variables.
+        run : wandb.Run or None
+            WandB run instance if monitoring is enabled.
+        device : str
+            Detected device for training ('/GPU:0' or '/CPU:0').
         """
 
         self.model = model
@@ -77,6 +129,7 @@ class Crow_Seg_Training:
         self.optimizer_image_cm = tf.keras.optimizers.Adam(learning_rate=1e-3)
         self.optimizer_seg_model = tf.keras.optimizers.Adam(learning_rate=1e-4)
         self.min_trace = False
+        self.unique_class = unique_class
         self.alpha = 1
         self.best_val_dice = 0.0
         self.best_val_loss = float('inf')
@@ -147,15 +200,38 @@ class Crow_Seg_Training:
         """
         Execute a single training step on the current batch.
         
-        This method performs forward pass, loss calculation, and parameter updates
-        with separate optimizers for confusion matrix and segmentation components.
+        This method performs the following operations:
+        1. Converts masks to class indices using argmax
+        2. Executes forward pass through the model with training=True
+        3. Calculates the noisy label loss using confusion matrices
+        4. Computes gradients for both model components
+        5. Applies separate optimizers to confusion matrix and segmentation components
+        6. Calculates evaluation metrics if ground truth masks are available
         
-        Returns:
-        --------
-        If self.orig_mask is not None:
-            tuple: (loss, dice, jaccard, sensitivity, specificity)
-        Else:
-            float: The training loss value
+        The method dynamically handles variables using two separate optimizers:
+        - optimizer_image_cm: Updates confusion matrix component variables
+        - optimizer_seg_model: Updates segmentation model variables
+        
+        Variables are categorized based on name patterns in self.image_cm_patterns.
+        
+        Returns
+        -------
+        tuple or float
+            If self.orig_mask is available (all_ground_truths=True):
+                Returns (loss, dice, jaccard, sensitivity, specificity)
+            Otherwise:
+                Returns only the training loss value
+            
+        Notes
+        -----
+        This method expects the following instance variables to be set:
+        - self.images: Input images batch
+        - self.masks: Annotator masks batch
+        - self.ann_ids: Annotator IDs batch
+        - self.orig_mask: Ground truth masks batch (optional)
+        
+        NaN loss values will not trigger gradient updates to prevent model instability.
+        When unique_class is specified, metrics are calculated only for that class.
         """
         self.masks = tf.argmax(self.masks, axis=1)
 
@@ -193,7 +269,10 @@ class Crow_Seg_Training:
             self.optimizer_seg_model.apply_gradients(zip(seg_model_grads, seg_model_vars))
 
         if self.orig_mask is not None:
-            dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., 1:2])
+            if isinstance(self.unique_class,int):
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.unique_class:self.unique_class+1])
+            else:
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred)
             return loss, dice, jaccard, sensitivity, specificity
         else:
             return loss
@@ -202,14 +281,33 @@ class Crow_Seg_Training:
         """
         Execute a single validation step on the current batch.
         
-        This method performs forward pass and loss calculation without parameter updates.
+        This method performs the following operations:
+        1. Converts masks to class indices using argmax
+        2. Executes forward pass through the model with training=False
+        3. Calculates the noisy label loss using confusion matrices
+        4. Calculates evaluation metrics if ground truth masks are available
         
-        Returns:
-        --------
-        If self.orig_mask is not None:
-            tuple: (loss, dice, jaccard, sensitivity, specificity)
-        Else:
-            float: The validation loss value
+        Unlike train_step, no gradient computation or parameter updates occur
+        during validation, making this method more efficient for evaluation.
+        
+        Returns
+        -------
+        tuple or float
+            If self.orig_mask is available (all_ground_truths=True):
+                Returns (loss, dice, jaccard, sensitivity, specificity)
+            Otherwise:
+                Returns only the validation loss value
+        
+        Notes
+        -----
+        This method expects the following instance variables to be set:
+        - self.images: Input images batch
+        - self.masks: Annotator masks batch
+        - self.ann_ids: Annotator IDs batch
+        - self.orig_mask: Ground truth masks batch (optional)
+        
+        NaN loss values are replaced with 0.0 to ensure stable reporting.
+        When unique_class is specified, metrics are calculated only for that class.
         """
         self.masks = tf.argmax(self.masks, axis=1)
 
@@ -226,7 +324,10 @@ class Crow_Seg_Training:
         loss = tf.reduce_mean(loss) if not tf.math.is_nan(loss) else 0.0
 
         if self.orig_mask is not None:
-            dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., 1:2])
+            if isinstance(self.unique_class,int):
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.unique_class:self.unique_class+1])
+            else:
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred)
             return loss, dice, jaccard, sensitivity, specificity
         else:
             return loss
@@ -235,16 +336,36 @@ class Crow_Seg_Training:
         """
         Run the full training loop for the specified number of epochs.
         
-        This method handles:
-        - Training and validation steps for each epoch
-        - Metric calculation and logging
-        - Model saving based on best validation performance
-        - WandB logging if enabled
-        - Performance parameter adjustments (alpha, min_trace) at epoch 5
-        - Set Segmentation model learning rate to 1e-5 at epoch 45
+        This method conducts a complete training process including:
+        1. Setup of WandB monitoring if enabled
+        2. Execution of training and validation steps for each epoch
+        3. Calculation and logging of performance metrics
+        4. Dynamic adjustment of training parameters at specific epochs:
+        - Epoch 5: Enables min_trace and reduces alpha to 0.4
+        - Epoch 45: Reduces segmentation model learning rate to 1e-5
+        5. Saving the best model based on validation performance
+        6. Uploading model artifacts to WandB if monitoring is enabled
         
-        The best model is saved to './models/best_model.keras' based on either
-        validation Dice score (if all_ground_truths=True) or validation loss.
+        The best model selection criterion depends on the all_ground_truths setting:
+        - If True: Model with highest validation Dice score is saved
+        - If False: Model with lowest validation loss is saved
+        
+        Returns
+        -------
+        None
+            The method doesn't return any value but saves the best model to './models/best_model.keras'
+        
+        Notes
+        -----
+        The method tracks multiple metrics during training when ground truth masks are available:
+        - Dice coefficient
+        - Jaccard index (IoU)
+        - Sensitivity (Recall)
+        - Specificity
+        
+        Time elapsed is calculated and displayed for each epoch to monitor training progress.
+        All metrics are logged to WandB if monitoring is enabled, providing comprehensive 
+        visualization of the training process.
         """
         
         type_training = self.wandb_logging()
