@@ -40,7 +40,7 @@ class Crow_Seg_Training:
         If provided, a list with [api_key, project_name, run_name] for WandB tracking.
     all_ground_truths : bool, optional
         Whether the datasets include ground truth masks for evaluation (default: False).
-    unique_class : int or None, optional
+    single_class : int or None, optional
         If specified, evaluate metrics only on this specific class (default: None).
     
     Attributes
@@ -72,7 +72,7 @@ class Crow_Seg_Training:
         Set up Weights & Biases logging if monitoring is enabled.
     """
 
-    def __init__(self, model, train_dataset, valid_dataset, config_model, epochs=60, wandb_monitoring=None, all_ground_truths=False, unique_class=None):
+    def __init__(self, model, train_dataset, valid_dataset, config_model, epochs=60, wandb_monitoring=None, all_ground_truths=False, single_class=None):
         """
         Initialize the Crow_Seg_Training instance with model and training parameters.
         
@@ -96,7 +96,7 @@ class Crow_Seg_Training:
             Whether datasets include ground truth masks for evaluation metrics calculation.
             When True, datasets should yield 4-tuples including original masks.
             Default is False.
-        unique_class : int or None, optional
+        single_class : int or None, optional
             If specified, calculate metrics only for this specific class index.
             Default is None (evaluate on all classes).
         
@@ -129,7 +129,7 @@ class Crow_Seg_Training:
         self.optimizer_image_cm = tf.keras.optimizers.Adam(learning_rate=1e-3)
         self.optimizer_seg_model = tf.keras.optimizers.Adam(learning_rate=1e-4)
         self.min_trace = False
-        self.unique_class = unique_class
+        self.single_class = single_class
         self.alpha = 1
         self.best_val_dice = 0.0
         self.best_val_loss = float('inf')
@@ -231,7 +231,7 @@ class Crow_Seg_Training:
         - self.orig_mask: Ground truth masks batch (optional)
         
         NaN loss values will not trigger gradient updates to prevent model instability.
-        When unique_class is specified, metrics are calculated only for that class.
+        When single_class is specified, metrics are calculated only for that class.
         """
         self.masks = tf.argmax(self.masks, axis=1)
 
@@ -269,8 +269,8 @@ class Crow_Seg_Training:
             self.optimizer_seg_model.apply_gradients(zip(seg_model_grads, seg_model_vars))
 
         if self.orig_mask is not None:
-            if isinstance(self.unique_class,int):
-                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.unique_class:self.unique_class+1])
+            if isinstance(self.single_class,int):
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.single_class:self.single_class+1])
             else:
                 dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred)
             return loss, dice, jaccard, sensitivity, specificity
@@ -307,7 +307,7 @@ class Crow_Seg_Training:
         - self.orig_mask: Ground truth masks batch (optional)
         
         NaN loss values are replaced with 0.0 to ensure stable reporting.
-        When unique_class is specified, metrics are calculated only for that class.
+        When single_class is specified, metrics are calculated only for that class.
         """
         self.masks = tf.argmax(self.masks, axis=1)
 
@@ -324,8 +324,8 @@ class Crow_Seg_Training:
         loss = tf.reduce_mean(loss) if not tf.math.is_nan(loss) else 0.0
 
         if self.orig_mask is not None:
-            if isinstance(self.unique_class,int):
-                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.unique_class:self.unique_class+1])
+            if isinstance(self.single_class,int):
+                dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred[..., self.single_class:self.single_class+1])
             else:
                 dice, jaccard, sensitivity, specificity = self.calculated_metrics(self.orig_mask, y_pred)
             return loss, dice, jaccard, sensitivity, specificity
