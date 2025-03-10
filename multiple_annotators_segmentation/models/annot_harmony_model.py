@@ -148,7 +148,7 @@ def residual_block(x, filters, kernel_initializer, block_name):
     x = layers.Activation('relu', name=f'ResAct_{block_name}')(x)
     return x
 
-def UNet(inputs, out_channels, n_scorers, activation):
+def UNet(inputs, out_channels, n_annotators, activation):
     """
     Implements a U-Net architecture for segmentation tasks with multiple annotators support.
     
@@ -261,7 +261,7 @@ def UNet(inputs, out_channels, n_scorers, activation):
                       kernel_initializer=kernel_initializer(42), name='Conv200')(x)
                       
     # Annotator scoring branch with sparse softmax activation
-    x_lambda = DilatedConv(n_scorers, kernel_size=(1, 1), activation='sparse_softmax',
+    x_lambda = DilatedConv(n_annotators, kernel_size=(1, 1), activation='sparse_softmax',
                         kernel_initializer=kernel_initializer(42), name='DilatedConv200-Lambda')(x)
 
     # Combine segmentation outputs and annotator scoring
@@ -270,7 +270,7 @@ def UNet(inputs, out_channels, n_scorers, activation):
     return y
     
 
-def ResUNet(inputs, out_channels, n_scorers, activation):
+def ResUNet(inputs, out_channels, n_annotators, activation):
     """
     Implements a ResNet-based U-Net architecture for segmentation with multiple annotators support.
     
@@ -281,7 +281,7 @@ def ResUNet(inputs, out_channels, n_scorers, activation):
     Args:
         inputs (tf.Tensor): Input tensor representing the image to segment.
         out_channels (int): Number of output channels (classes) for segmentation.
-        n_scorers (int): Number of annotators in the dataset.
+        n_annotators (int): Number of annotators in the dataset.
         activation (str): Activation function for the segmentation output 
                           (e.g., 'softmax', 'sigmoid').
     
@@ -348,7 +348,7 @@ def ResUNet(inputs, out_channels, n_scorers, activation):
                       kernel_initializer=kernel_initializer(42), name='Conv200')(x)
     
     # Annotator scoring branch with sparse softmax activation
-    x_lambda = DilatedConv(n_scorers, kernel_size=(1, 1), activation='sparse_softmax',
+    x_lambda = DilatedConv(n_annotators, kernel_size=(1, 1), activation='sparse_softmax',
                         kernel_initializer=kernel_initializer(42), name='DilatedConv200-Lambda')(x)
 
     # Combine segmentation outputs and annotator scoring
@@ -391,10 +391,10 @@ def Annot_Harmony_Model(num_annotators=3, class_no=2, input_shape=(512, 512, 3),
     # Select and build the appropriate segmentation backbone
     if seg_model == 'ResUNet':
         # Use ResNet-based UNet architecture
-        seg_rm = ResUNet(image_input, out_channels=class_no, n_scorers=num_annotators, activation=activation)
+        seg_rm = ResUNet(image_input, out_channels=class_no, n_annotators=num_annotators, activation=activation)
     elif seg_model == 'UNet':
         # Use standard UNet architecture
-        seg_rm = UNet(image_input, out_channels=class_no, n_scorers=num_annotators, activation=activation)
+        seg_rm = UNet(image_input, out_channels=class_no, n_annotators=num_annotators, activation=activation)
     else:
         # Raise error for unsupported model types
         raise ValueError(f"Unsupported segmentation model type: {seg_model}. Supported models are 'ResUNet' and 'UNet'.")
